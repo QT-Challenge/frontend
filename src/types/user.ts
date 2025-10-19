@@ -8,7 +8,7 @@ export interface EmailVerification {
 }
 
 export interface User {
-  id: number;
+  id: string;
   email: string;
   role: UserRole;
   status: UserStatus;
@@ -30,7 +30,7 @@ export interface UpdateUserDto {
 }
 
 export interface EmailVerificationDetail {
-  userId: number;
+  userId: string;
   email: string;
   verification: {
     isValid: boolean;
