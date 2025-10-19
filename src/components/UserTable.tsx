@@ -6,8 +6,8 @@ import type { User } from '@/types/user';
 interface UserTableProps {
   users: User[];
   onEdit: (user: User) => void;
-  onDelete: (id: number) => void;
-  onVerify: (id: number) => void;
+  onDelete: (id: string) => void;
+  onVerify: (id: string) => void;
 }
 
 export default function UserTable({ users, onEdit, onDelete, onVerify }: UserTableProps) {

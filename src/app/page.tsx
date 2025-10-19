@@ -70,7 +70,7 @@ export default function Home() {
     setIsUserModalOpen(true);
   };
 
-  const handleDeleteClick = (id: number) => {
+  const handleDeleteClick = (id: string) => {
     const user = users.find((u) => u.id === id);
     if (!user) return;
 
@@ -103,7 +103,7 @@ export default function Home() {
     setCurrentPage(page);
   };
 
-  const handleVerifyEmail = async (id: number) => {
+  const handleVerifyEmail = async (id: string) => {
     try {
       const data = await api.users.verifyEmail(id);
       setVerificationData(data);
