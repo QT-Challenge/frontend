@@ -1,63 +1,61 @@
 # User Management Frontend
 
-A modern, clean web application built with Next.js and Tailwind CSS for managing users with cryptographic email verification.
+A modern web application built with Next.js and Tailwind CSS for managing users with cryptographic email verification.
+
+## 🚀 Live Demo
+
+**Frontend:** [http://54.83.124.107/](http://54.83.124.107/)
+**Backend API:** [http://34.236.150.134:3001/](http://34.236.150.134:3001/)
 
 ## Features
 
-- **User Management**: Create, read, update, and delete users
-- **Analytics Chart**: Visual chart showing users created per day over the last 7 days
-- **Email Verification**: View detailed cryptographic verification information for each user
-- **Protobuf Export**: Export user data in Protocol Buffer format
-- **Real-time Updates**: Refresh user list on demand
-- **Responsive Design**: Works on desktop and mobile devices
-- **Clean UI**: Simple, modern interface without gradients or eye-straining colors
+- **User Management** - Create, read, update, and delete users
+- **Toast Notifications** - Real-time feedback for all user actions
+- **Analytics Dashboard** - Visual chart showing user creation trends
+- **Email Verification** - View cryptographic verification details
+- **Protobuf Export** - Download user data in Protocol Buffer format
+- **Pagination** - Efficient navigation through large datasets
+- **Responsive Design** - Works seamlessly on all devices
 
 ## Tech Stack
 
-- **Next.js 15.5.6**: React framework with App Router
-- **React 19.1.0**: UI library
-- **TypeScript**: Type safety
-- **Tailwind CSS 4**: Utility-first CSS framework
-- **Recharts**: Modern charting library for React
-- **API Integration**: RESTful API client
+- **Framework:** Next.js 15.5.6
+- **UI Library:** React 19.1.0
+- **Language:** TypeScript
+- **Styling:** Tailwind CSS 4
+- **Charts:** Recharts 3.3.0
+- **Notifications:** React Hot Toast 2.6.0
+- **Icons:** Lucide React
 
-## Getting Started
+## Installation
 
-### Prerequisites
-
-- Node.js 20+ installed
-- Backend API running on port 3001
-
-### Installation
-
-1. Install dependencies:
 ```bash
+# Install dependencies
 npm install
+
+# Configure environment variables
+cp .env.local.example .env.local
 ```
 
-2. Configure the API URL (optional):
-   - Default: `http://localhost:3001`
-   - To change, edit `.env.local`:
-```
-NEXT_PUBLIC_API_URL=http://your-api-url:3001
+Edit `.env.local` and set your backend API URL:
+```env
+NEXT_PUBLIC_API_URL=http://localhost:3001
 ```
 
-### Development
-
-Run the development server:
+## Development
 
 ```bash
+# Run development server
 npm run dev
-```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
-
-### Build for Production
-
-```bash
+# Build for production
 npm run build
+
+# Start production server
 npm start
 ```
+
+Visit [http://localhost:3000](http://localhost:3000)
 
 ## Project Structure
 
@@ -65,53 +63,81 @@ npm start
 frontend/
 ├── src/
 │   ├── app/
-│   │   ├── layout.tsx       # Root layout
-│   │   ├── page.tsx         # Main page with user management
-│   │   └── globals.css      # Global styles
+│   │   ├── layout.tsx           # Root layout with toast provider
+│   │   ├── page.tsx             # Main dashboard
+│   │   └── globals.css          # Global styles
 │   ├── components/
-│   │   ├── UserTable.tsx    # User list table
-│   │   ├── UserModal.tsx    # Create/Edit user modal
-│   │   ├── VerificationModal.tsx  # Email verification details
-│   │   └── UserChart.tsx    # Users created per day chart
+│   │   ├── UserTable.tsx        # User list table
+│   │   ├── UserModal.tsx        # Create/Edit modal
+│   │   ├── UserChart.tsx        # Analytics chart
+│   │   ├── VerificationModal.tsx # Email verification details
+│   │   ├── DeleteConfirmModal.tsx # Delete confirmation
+│   │   └── Pagination.tsx       # Pagination controls
 │   ├── lib/
-│   │   └── api.ts           # API client
+│   │   ├── api.ts               # API client
+│   │   └── toast.ts             # Toast utilities
 │   └── types/
-│       └── user.ts          # TypeScript types
-├── .env.local               # Environment variables
-└── package.json
+│       └── user.ts              # TypeScript interfaces
 ```
 
-## API Endpoints Used
+## API Integration
 
-- `GET /api/users` - List all users
-- `POST /api/users` - Create a new user
-- `GET /api/users/:id` - Get user details
+The frontend communicates with the backend API using the following endpoints:
+
+- `GET /api/users?page=1&limit=10` - Paginated user list
+- `POST /api/users` - Create user
 - `PUT /api/users/:id` - Update user
 - `DELETE /api/users/:id` - Delete user
-- `GET /api/users/:id/verify-email` - Verify email signature
-- `GET /api/users/export` - Export users as Protobuf
+- `GET /api/users/:id/verify-email` - Email verification
+- `GET /api/users/export` - Export to Protobuf
 
-## Design Principles
+## Environment Variables
 
-- **Simple & Modern**: Clean interface with proper spacing and hierarchy
-- **No Gradients**: Solid colors for a professional look
-- **Readable**: Comfortable font sizes (not too big)
-- **Accessible**: Good contrast ratios and semantic HTML
-- **Responsive**: Mobile-first approach with Tailwind utilities
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `NEXT_PUBLIC_API_URL` | Backend API URL | `http://localhost:3001` |
 
-## Color Palette
+## Features in Detail
 
-- **Primary**: Blue (#3B82F6) - Actions and links
-- **Success**: Green (#10B981) - Active status, verified
-- **Warning**: Red (#EF4444) - Delete actions, errors
-- **Neutral**: Gray scale - Backgrounds, borders, text
-- **Accent**: Purple (#A855F7) - Admin role badge
+### User Management
+- Create users with email, role (admin/user), and status (active/inactive)
+- Edit existing user information
+- Delete users with confirmation dialog
+- Real-time validation and error handling
 
-## User Actions
+### Dashboard
+- User statistics cards (Total, Active, Admins, Inactive)
+- 7-day user creation trend chart
+- Paginated user table
+- Search and filter capabilities
 
-1. **Create User**: Click "Create New User" button
-2. **Edit User**: Click "Edit" in the user row
-3. **Delete User**: Click "Delete" (requires confirmation)
-4. **Verify Email**: Click "Verify" to see cryptographic details
-5. **Export Data**: Click "Export as Protobuf" to download
-6. **Refresh**: Click "Refresh" to reload the user list
+### Email Verification
+- Cryptographic verification status
+- SHA-384 hash display
+- RSA-2048 digital signature
+- Audit trail for email modifications
+
+### Notifications
+- Success notifications for create/update/delete operations
+- Error messages with detailed feedback
+- Loading states for async operations
+- Auto-dismissing toast messages
+
+## Color Scheme
+
+- **Primary Blue:** Actions and links
+- **Success Green:** Verified status, successful operations
+- **Error Red:** Delete actions, validation errors
+- **Purple:** Admin role badges
+- **Neutral Grays:** Backgrounds, borders, text
+
+## Browser Support
+
+- Chrome (latest)
+- Firefox (latest)
+- Safari (latest)
+- Edge (latest)
+
+## License
+
+MIT
