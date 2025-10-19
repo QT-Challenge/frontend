@@ -1,103 +1,255 @@
-import Image from "next/image";
+'use client';
+
+import { useState, useEffect } from 'react';
+import { UserPlus, Download, RefreshCw } from 'lucide-react';
+import { showToast } from '@/lib/toast';
+import { api } from '@/lib/api';
+import type { User, CreateUserDto, UpdateUserDto, EmailVerificationDetail, PaginationMeta } from '@/types/user';
+import UserTable from '@/components/UserTable';
+import UserModal from '@/components/UserModal';
+import VerificationModal from '@/components/VerificationModal';
+import DeleteConfirmModal from '@/components/DeleteConfirmModal';
+import UserChart from '@/components/UserChart';
+import Pagination from '@/components/Pagination';
 
 export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [users, setUsers] = useState<User[]>([]);
+  const [allUsers, setAllUsers] = useState<User[]>([]);
+  const [pagination, setPagination] = useState<PaginationMeta | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
+  const [loading, setLoading] = useState(true);
+  const [isUserModalOpen, setIsUserModalOpen] = useState(false);
+  const [isVerificationModalOpen, setIsVerificationModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
+  const [verificationData, setVerificationData] = useState<EmailVerificationDetail | null>(null);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  useEffect(() => {
+    fetchUsers(currentPage, itemsPerPage);
+  }, [currentPage, itemsPerPage]);
+
+  const fetchUsers = async (page: number = 1, limit: number = 10) => {
+    try {
+      setLoading(true);
+      const response = await api.users.getAll(page, limit);
+      setUsers(response.data);
+      setPagination(response.pagination);
+
+      // Fetch all users for the chart (without pagination)
+      if (page === 1) {
+        const allResponse = await api.users.getAll(1, 1000);
+        setAllUsers(allResponse.data);
+      }
+    } catch (err) {
+      showToast.error(err instanceof Error ? err.message : 'Failed to fetch users');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateUser = async (data: CreateUserDto | UpdateUserDto) => {
+    try {
+      if (selectedUser) {
+        await api.users.update(selectedUser.id, data as UpdateUserDto);
+        showToast.success('User updated successfully');
+      } else {
+        await api.users.create(data as CreateUserDto);
+        showToast.success('User created successfully');
+      }
+      await fetchUsers(currentPage, itemsPerPage);
+    } catch (err) {
+      showToast.error(err instanceof Error ? err.message : 'Failed to save user');
+      throw err; // Re-throw so the modal can handle it
+    }
+  };
+
+  const handleEditUser = (user: User) => {
+    setSelectedUser(user);
+    setIsUserModalOpen(true);
+  };
+
+  const handleDeleteClick = (id: number) => {
+    const user = users.find((u) => u.id === id);
+    if (!user) return;
+
+    setUserToDelete(user);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!userToDelete) return;
+
+    try {
+      await api.users.delete(userToDelete.id);
+      showToast.success('User deleted successfully');
+      setIsDeleteModalOpen(false);
+      setUserToDelete(null);
+      await fetchUsers(currentPage, itemsPerPage);
+    } catch (err) {
+      showToast.error(err instanceof Error ? err.message : 'Failed to delete user');
+      setIsDeleteModalOpen(false);
+      setUserToDelete(null);
+    }
+  };
+
+  const handleDeleteCancel = () => {
+    setIsDeleteModalOpen(false);
+    setUserToDelete(null);
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const handleVerifyEmail = async (id: number) => {
+    try {
+      const data = await api.users.verifyEmail(id);
+      setVerificationData(data);
+      setIsVerificationModalOpen(true);
+      showToast.success('Email verification generated');
+    } catch (err) {
+      showToast.error(err instanceof Error ? err.message : 'Failed to verify email');
+    }
+  };
+
+  const handleExportUsers = async () => {
+    try {
+      showToast.loading('Exporting users...', { id: 'export-users' });
+      const blob = await api.users.export();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'users.pb';
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      showToast.success('Users exported successfully', { id: 'export-users' });
+    } catch (err) {
+      showToast.error(err instanceof Error ? err.message : 'Failed to export users', { id: 'export-users' });
+    }
+  };
+
+  const openCreateModal = () => {
+    setSelectedUser(null);
+    setIsUserModalOpen(true);
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Header */}
+        <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">User Management</h1>
+            <p className="text-sm text-gray-600 mt-1">
+              Manage users with cryptographic email verification
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={openCreateModal}
+              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+            >
+              <UserPlus size={18} />
+              <span>New User</span>
+            </button>
+            <button
+              onClick={handleExportUsers}
+              disabled={users.length === 0}
+              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Download size={18} />
+              <span>Export</span>
+            </button>
+            <button
+              onClick={() => fetchUsers(currentPage, itemsPerPage)}
+              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors shadow-sm"
+            >
+              <RefreshCw size={18} />
+            </button>
+          </div>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+
+        {loading ? (
+          <div className="flex justify-center items-center py-20">
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {/* Stats and Chart Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+              {/* Stats Cards */}
+              <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+                <div className="text-sm font-medium text-gray-600">Total Users</div>
+                <div className="mt-2 text-3xl font-bold text-gray-900">{pagination?.total || 0}</div>
+              </div>
+              <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+                <div className="text-sm font-medium text-gray-600">Active</div>
+                <div className="mt-2 text-3xl font-bold text-green-600">
+                  {allUsers.filter(u => u.status === 'active').length}
+                </div>
+              </div>
+              <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+                <div className="text-sm font-medium text-gray-600">Admins</div>
+                <div className="mt-2 text-3xl font-bold text-purple-600">
+                  {allUsers.filter(u => u.role === 'admin').length}
+                </div>
+              </div>
+              <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+                <div className="text-sm font-medium text-gray-600">Inactive</div>
+                <div className="mt-2 text-3xl font-bold text-gray-400">
+                  {allUsers.filter(u => u.status === 'inactive').length}
+                </div>
+              </div>
+            </div>
+
+            {/* Chart */}
+            <UserChart users={allUsers.length > 0 ? allUsers : users} />
+
+            {/* Table */}
+            <div className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm">
+              <UserTable
+                users={users}
+                onEdit={handleEditUser}
+                onDelete={handleDeleteClick}
+                onVerify={handleVerifyEmail}
+              />
+              {pagination && (
+                <Pagination pagination={pagination} onPageChange={handlePageChange} />
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <UserModal
+        isOpen={isUserModalOpen}
+        onClose={() => {
+          setIsUserModalOpen(false);
+          setSelectedUser(null);
+        }}
+        onSubmit={handleCreateUser}
+        user={selectedUser}
+      />
+
+      <VerificationModal
+        isOpen={isVerificationModalOpen}
+        onClose={() => {
+          setIsVerificationModalOpen(false);
+          setVerificationData(null);
+        }}
+        verification={verificationData}
+      />
+
+      <DeleteConfirmModal
+        isOpen={isDeleteModalOpen}
+        onClose={handleDeleteCancel}
+        onConfirm={handleDeleteConfirm}
+        userEmail={userToDelete?.email || ''}
+      />
     </div>
   );
 }
